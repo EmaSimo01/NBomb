@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+option csharp_namespace = "NBombedGrpcServer";
+
+package operation;
+
+// The operation service definition.
+service Operation {
+  // Sends the payload
+  rpc GetPayload (PayloadRequest) returns (PayloadResponse);
+}
+
+// The request message containing the parameters.
+message PayloadRequest {
+  int32 payload_size = 1;
+  int32 intensity = 2;
+
+  // Field 3 held `bool async`. Replaced by workload_kind /
+  // execution_mode pair. Reserved so the number is never silently reused.
+  reserved 3;
+
+  int32 workload_kind = 4;   // WorkloadKind:   0 = Cpu, 1 = IO
+  int32 execution_mode = 5;  // ExecutionMode:  0 = Blocking, 1 = Async
+}
+
+// The response message containing the payload.
+message PayloadResponse {
+  // why `bytes` rather than `string`: a string field would force a byte -> UTF-16
+  // widening on the server and a UTF-8 encode on serialization. A request
+  // cost the HTTP and WebSocket servers do not pay. Keeping it bytes makes the
+  // protocol comparison measure framing and not include this conversion.
+  bytes payload = 1;
+}

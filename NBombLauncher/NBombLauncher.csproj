@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- The load generator is not always more powerfull then the server, so its own garbage
+         collector is a variable worth monitoring. -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <!-- Writes packages.lock.json so a rebuild months later resolves the same graph. Floating
+         ranges make the measurement environment mutable, which means the
+         experiment is not reproducible. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="NBomber" Version="6.6.0" />
+    <PackageReference Include="NBomber.WebSockets" Version="0.1.3" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.76.0" />
+    <!-- Same version as the gRPC server. Both generate C# from the same .proto. -->
+    <PackageReference Include="Grpc.Tools" Version="2.83.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Google.Protobuf" Version="3.33.5" />
+    <PackageReference Include="System.CommandLine" Version="2.0.7" />
+    <Protobuf Include="..\Protos\operation.proto" GrpcServices="Client" Link="Protos\operation.proto" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NBombShared\NBombShared.csproj" />
+  </ItemGroup>
+</Project>
