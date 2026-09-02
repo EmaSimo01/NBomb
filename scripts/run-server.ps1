@@ -303,7 +303,6 @@ if ($missing.Count -gt 0) {
 }
 
 Write-Host "Recording counters for ${RecordSeconds}s" -ForegroundColor Cyan
-Write-Host "  PerfMon : $perfmonCsv" -ForegroundColor DarkGray
 Write-Host "  Runtime : $runtimeCsv" -ForegroundColor DarkGray
 Write-Host "  Env     : $envTxt" -ForegroundColor DarkGray
 
@@ -447,6 +446,13 @@ finally {
         Stop-Process -Id $process.Id -Force -Confirm:$false
     }
 
+    # logman ignores the file name passed with -o and always appends its own serial
+    # number. This is needed to resolve the file logman actually created instead of
+    # guessing the suffix.
+    $perfmonCsvActual = Get-ChildItem -Path $OutputDir `
+        -Filter "$([IO.Path]::GetFileNameWithoutExtension($perfmonCsv))*.csv" |
+        Select-Object -First 1 -ExpandProperty FullName
+
     # -------------------------------------------------------------------------------------
     # RENAME THE PERFMON COLUMNS
     #
@@ -456,7 +462,7 @@ finally {
     #
     # The first data row is deleted because a rate counter has no previous sample to differentiate against.
     # -------------------------------------------------------------------------------------
-    if (Test-Path $perfmonCsv) {
+    if ($perfmonCsvActual) {
         try {
             # Ordered: the longest patterns must be tested first or "Working set" would also
             # match "Working set - Privato".
@@ -474,7 +480,7 @@ finally {
                 @{ Pattern = '\\Segmenti ritrasmessi/sec$';     Name = 'tcp_segments_retransmitted_sec' }
             )
 
-            $lines = Get-Content -Path $perfmonCsv
+            $lines = Get-Content -Path $perfmonCsvActual
             if ($lines.Count -ge 2) {
                 $headerCells = $lines[0] -split '","' | ForEach-Object { $_.Trim('"') }
 
@@ -501,12 +507,15 @@ finally {
                 $rewritten = @('"' + ($headerCells -join '","') + '"')
                 # Skip the header and the first data row.
                 $rewritten += $lines[2..($lines.Count - 1)]
-                $rewritten | Set-Content -Path $perfmonCsv -Encoding utf8
+                $rewritten | Set-Content -Path $perfmonCsvActual -Encoding utf8
             }
         }
         catch {
             Write-Warning "Could not rename the perfmon CSV columns: $_"
         }
+    }
+    else {
+        Write-Warning "Perfmon CSV not found under '$OutputDir' matching '$([IO.Path]::GetFileNameWithoutExtension($perfmonCsv))*.csv'; columns left with their original PDH names."
     }
 
     Remove-Item Env:\NBOMB_SAMPLER_CSV -ErrorAction SilentlyContinue
@@ -516,6 +525,6 @@ finally {
 }
 
 Write-Host "Done." -ForegroundColor Green
-Write-Host "  $perfmonCsv"
+Write-Host "  $(if ($perfmonCsvActual) { $perfmonCsvActual } else { $perfmonCsv })"
 Write-Host "  $runtimeCsv"
 Write-Host "  $envTxt"
